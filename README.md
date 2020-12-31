@@ -1,6 +1,6 @@
 # Injector
 
-[![Build Status](https://travis-ci.org/kubo/injector.svg?branch=master)](https://travis-ci.org/kubo/injector)
+[![Build Status](https://travis-ci.com/kubo/injector.svg?branch=master)](https://travis-ci.com/kubo/injector)
 
 **Library for injecting a shared library into a Linux or Windows process**
 
@@ -29,8 +29,11 @@ technique to load a DLL into another process with some improvements.
 
 1. It gets Win32 error messages when `LoadLibrary` fails by copying assembly
    code into the target process.
-2. It can inject a 32-bit dll into a 32-bit process from 64-bit processes
+2. It can inject a 32-bit dll into a 32-bit process from x64 processes
    by checking the export entries in 32-bit kernel32.dll.
+
+**Note:** It may work on Windows on ARM though I have not tested it because
+I have no ARM machines. Let me know if it really works.
 
 # Compilation
 
@@ -82,6 +85,7 @@ The `nmake` command creates:
 ...
 
     injector_t *injector;
+    void *handle;
 
     /* attach to a process whose process id is 1234. */
     if (injector_attach(&injector, 1234) != 0) {
@@ -89,13 +93,21 @@ The `nmake` command creates:
         return;
     }
     /* inject a shared library into the process. */
-    if (injector_inject(injector, "/path/to/shared/library") != 0) {
+    if (injector_inject(injector, "/path/to/shared/library", NULL) != 0) {
         printf("INJECT ERROR: %s\n", injector_error());
     }
     /* inject another shared library. */
-    if (injector_inject(injector, "/path/to/another/shared/library") != 0) {
+    if (injector_inject(injector, "/path/to/another/shared/library", &handle) != 0) {
         printf("INJECT ERROR: %s\n", injector_error());
     }
+
+...
+
+    /* uninject the second shared library. */
+    if (injector_uninject(injector, handle) != 0) {
+        printf("UNINJECT ERROR: %s\n", injector_error());
+    }
+
     /* cleanup */
     injector_detach(injector);
 ```
@@ -128,13 +140,15 @@ injector process \ target process | arm64 | armhf | armel
 
 ## Windows
 
-injector process \ target process | x64 | 32-bit
----|---|---
-**x64**     | success(*2) | success(*2)
-**32-bit**  | failure(*1) | success(*2)
+injector process \ target process | x64 | x86 | arm64
+---|---|---|---
+**x64**     | success(*2) | success(*2) | -
+**x86**     | failure(*1) | success(*2) | -
+**arm64**   | -           | -           | not tested(*3)
 
-*1: failure with `64-bit target process isn't supported by 32-bit process`.  
+*1: failure with `x64 target process isn't supported by x86 process`.  
 *2: tested on travis-ci  
+*3: It may work though I have not tested it. Let me know if it really works.
 
 # Caveats
 
